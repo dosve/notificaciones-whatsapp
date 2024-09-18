@@ -1,0 +1,9 @@
+# Ignorar node_modules
+node_modules/
+
+# Ignorar archivos de autenticación y caché
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Ignorar logs
+npm-debug.log

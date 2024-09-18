@@ -1,3 +1,4 @@
+const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 
@@ -13,20 +14,8 @@ client.on('qr', (qr) => {
 });
 
 // Enviar un mensaje al grupo cuando el cliente está listo
-client.on('ready', async () => {
+client.on('ready', () => {
     console.log('Cliente está listo');
-
-    // Reemplaza con el ID del grupo obtenido
-    const groupId = '120363317929709782@g.us'; // Reemplaza con el ID de tu grupo
-
-    try {
-        // Envía un mensaje al grupo
-        const message = '¡Hola a todos! Este es un mensaje para el grupo.';
-        await client.sendMessage(groupId, message);
-        console.log('Mensaje enviado al grupo');
-    } catch (error) {
-        console.error('Error al enviar el mensaje:', error);
-    }
 });
 
 // Maneja errores
@@ -40,3 +29,34 @@ client.on('disconnected', (reason) => {
 
 // Inicia el cliente
 client.initialize();
+
+// Crea un servidor Express
+const app = express();
+const PORT = 80;
+
+// Middleware para parsear JSON
+app.use(express.json());
+
+// Endpoint para enviar un mensaje
+app.post('/send-message', async (req, res) => {
+    const { groupId, message } = req.body;
+
+    if (!groupId || !message) {
+        return res.status(400).json({ error: 'Faltan groupId o message en la solicitud.' });
+    }
+
+    try {
+        // Envía el mensaje al grupo
+        await client.sendMessage(groupId, message);
+        console.log('Mensaje enviado al grupo:', message);
+        return res.status(200).json({ success: 'Mensaje enviado.' });
+    } catch (error) {
+        console.error('Error al enviar el mensaje:', error);
+        return res.status(500).json({ error: 'Error al enviar el mensaje.' });
+    }
+});
+
+// Inicia el servidor
+app.listen(PORT, () => {
+    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+});
