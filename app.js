@@ -13,29 +13,40 @@ client.on('qr', (qr) => {
     console.log('Escanea el código QR con WhatsApp');
 });
 
-// Enviar un mensaje al grupo cuando el cliente está listo
+// Evento cuando el cliente está listo
 client.on('ready', () => {
     console.log('Cliente está listo');
 });
 
-// Maneja errores
+// Manejo de errores de autenticación
 client.on('auth_failure', (msg) => {
     console.error('Error de autenticación', msg);
 });
 
+// Manejo de desconexiones
 client.on('disconnected', (reason) => {
-    console.log('Cliente desconectado', reason);
+    console.log('Cliente desconectado:', reason);
+    console.log('Reintentando conexión en 5 segundos...');
+    setTimeout(() => {
+        client.initialize();
+    }, 5000); // Reintentar conexión en 5 segundos
 });
 
-// Inicia el cliente
+// Inicia el cliente de WhatsApp
 client.initialize();
 
 // Crea un servidor Express
 const app = express();
-const PORT = 80;
+const PORT = 80; // Puerto 80
 
 // Middleware para parsear JSON
 app.use(express.json());
+
+// Endpoint para verificar el estado del servidor
+app.get('/status', (req, res) => {
+    console.log('Solicitud recibida en /status');
+    res.status(200).json({ status: 'Servidor está activo y recibiendo solicitudes.' });
+});
 
 // Endpoint para enviar un mensaje
 app.post('/send-message', async (req, res) => {
@@ -57,6 +68,10 @@ app.post('/send-message', async (req, res) => {
 });
 
 // Inicia el servidor
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });
+
+// Aumenta el tiempo de espera (timeout) para prevenir que las conexiones se cierren rápidamente
+server.setTimeout(300000); // Tiempo de espera de 5 minutos
+
