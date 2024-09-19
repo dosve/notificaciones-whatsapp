@@ -13,40 +13,29 @@ client.on('qr', (qr) => {
     console.log('Escanea el código QR con WhatsApp');
 });
 
-// Evento cuando el cliente está listo
+// Enviar un mensaje al grupo cuando el cliente está listo
 client.on('ready', () => {
     console.log('Cliente está listo');
 });
 
-// Manejo de errores de autenticación
+// Maneja errores
 client.on('auth_failure', (msg) => {
     console.error('Error de autenticación', msg);
 });
 
-// Manejo de desconexiones
 client.on('disconnected', (reason) => {
-    console.log('Cliente desconectado:', reason);
-    console.log('Reintentando conexión en 5 segundos...');
-    setTimeout(() => {
-        client.initialize();
-    }, 5000); // Reintentar conexión en 5 segundos
+    console.log('Cliente desconectado', reason);
 });
 
-// Inicia el cliente de WhatsApp
+// Inicia el cliente
 client.initialize();
 
 // Crea un servidor Express
 const app = express();
-const PORT = 80; // Puerto 80
+const PORT = 80;
 
 // Middleware para parsear JSON
 app.use(express.json());
-
-// Endpoint para verificar el estado del servidor
-app.get('/status', (req, res) => {
-    console.log('Solicitud recibida en /status');
-    res.status(200).json({ status: 'Servidor está activo y recibiendo solicitudes.' });
-});
 
 // Endpoint para enviar un mensaje
 app.post('/send-message', async (req, res) => {
@@ -67,11 +56,55 @@ app.post('/send-message', async (req, res) => {
     }
 });
 
-// Inicia el servidor
-const server = app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+// Nuevo Endpoint para manejar el Webhook de Facebook
+app.get('/webhook', (req, res) => {
+    const VERIFY_TOKEN = 'mi_token_de_verificacion';
+
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    // Verifica si el modo y el token son válidos
+    if (mode && token === VERIFY_TOKEN) {
+        // Responde al challenge de verificación de Facebook
+        console.log('Verificación del webhook exitosa');
+        res.status(200).send(challenge);
+    } else {
+        // Respuesta no autorizada
+        res.status(403).send('Error de verificación');
+    }
 });
 
-// Aumenta el tiempo de espera (timeout) para prevenir que las conexiones se cierren rápidamente
-server.setTimeout(300000); // Tiempo de espera de 5 minutos
+// Maneja las notificaciones POST del Webhook de Facebook
+app.post('/webhook', (req, res) => {
+    const body = req.body;
 
+    // Verifica que sea un evento de una página
+    if (body.object === 'page') {
+        body.entry.forEach(function(entry) {
+            const pageID = entry.id;
+            const timeOfEvent = entry.time;
+
+            // Recorre todos los cambios en el feed
+            entry.changes.forEach(function(change) {
+                if (change.field === 'feed') {
+                    const message = change.value.message || 'Sin mensaje';
+                    console.log('Nueva publicación recibida:', message);
+
+                    // Aquí podrías enviar un mensaje a WhatsApp usando el cliente
+                    // Ejemplo: await client.sendMessage(groupId, message);
+                }
+            });
+        });
+        // Devuelve una respuesta 200 para confirmar que se recibió el evento
+        res.status(200).send('EVENT_RECEIVED');
+    } else {
+        // Devuelve una respuesta 404 si el evento no es de una página
+        res.status(404).send('Evento no soportado');
+    }
+});
+
+// Inicia el servidor
+app.listen(PORT, () => {
+    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+});
