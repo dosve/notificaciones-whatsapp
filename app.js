@@ -2,19 +2,21 @@ const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const https = require('https');
-const http = require('http');
 const fs = require('fs');
 
-// Cargar los certificados SSL generados por Let's Encrypt
-const privateKey = fs.readFileSync('/etc/letsencrypt/live/server.activos-digitales.com/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('/etc/letsencrypt/live/server.activos-digitales.com/fullchain.pem', 'utf8');
-const ca = fs.readFileSync('/etc/letsencrypt/live/server.activos-digitales.com/chain.pem', 'utf8');
+// Cargar los certificados desde la carpeta ~/certificados
+const privateKey = fs.readFileSync('/home/admin/certificados/privkey1.pem', 'utf8');
+const certificate = fs.readFileSync('/home/admin/certificados/fullchain1.pem', 'utf8');
+const ca = fs.readFileSync('/home/admin/certificados/chain1.pem', 'utf8');
 
 const credentials = { key: privateKey, cert: certificate, ca: ca };
 
 // Inicializa el cliente con autenticación local
 const client = new Client({
-    authStrategy: new LocalAuth()
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }
 });
 
 // Genera y muestra el código QR en la terminal para escanear con WhatsApp Web
@@ -122,6 +124,7 @@ httpsServer.listen(443, () => {
 });
 
 // Redirigir tráfico HTTP a HTTPS
+const http = require('http');
 const httpServer = http.createServer((req, res) => {
     res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
     res.end();
