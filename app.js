@@ -1,6 +1,16 @@
 const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const https = require('https');
+const http = require('http');
+const fs = require('fs');
+
+// Cargar los certificados SSL generados por Let's Encrypt
+const privateKey = fs.readFileSync('/etc/letsencrypt/live/server.activos-digitales.com/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('/etc/letsencrypt/live/server.activos-digitales.com/fullchain.pem', 'utf8');
+const ca = fs.readFileSync('/etc/letsencrypt/live/server.activos-digitales.com/chain.pem', 'utf8');
+
+const credentials = { key: privateKey, cert: certificate, ca: ca };
 
 // Inicializa el cliente con autenticación local
 const client = new Client({
@@ -32,7 +42,6 @@ client.initialize();
 
 // Crea un servidor Express
 const app = express();
-const PORT = 80;
 
 // Middleware para parsear JSON
 app.use(express.json());
@@ -58,7 +67,7 @@ app.post('/send-message', async (req, res) => {
 
 // Nuevo Endpoint para manejar el Webhook de Facebook
 app.get('/webhook', (req, res) => {
-    const VERIFY_TOKEN = 'mi_token_de_verificacion';
+    const VERIFY_TOKEN = '123456789';
 
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
@@ -104,7 +113,21 @@ app.post('/webhook', (req, res) => {
     }
 });
 
-// Inicia el servidor
-app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+// Configura el servidor HTTPS
+const httpsServer = https.createServer(credentials, app);
+
+// Escuchar en el puerto 443 para HTTPS
+httpsServer.listen(443, () => {
+    console.log('Servidor HTTPS escuchando en https://server.activos-digitales.com');
+});
+
+// Redirigir tráfico HTTP a HTTPS
+const httpServer = http.createServer((req, res) => {
+    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
+    res.end();
+});
+
+// Escuchar en el puerto 80 para redirigir a HTTPS
+httpServer.listen(80, () => {
+    console.log('Redireccionando tráfico HTTP a HTTPS');
 });
