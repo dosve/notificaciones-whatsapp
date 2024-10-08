@@ -50,68 +50,20 @@ app.use(express.json());
 
 // Endpoint para enviar un mensaje
 app.post('/send-message', async (req, res) => {
-    const { groupId, message } = req.body;
+    const { recipient, message } = req.body; // Cambiamos groupId por recipient
 
-    if (!groupId || !message) {
-        return res.status(400).json({ error: 'Faltan groupId o message en la solicitud.' });
+    if (!recipient || !message) {
+        return res.status(400).json({ error: 'Faltan recipient o message en la solicitud.' });
     }
 
     try {
-        // Envía el mensaje al grupo
-        await client.sendMessage(groupId, message);
-        console.log('Mensaje enviado al grupo:', message);
+        // Envía el mensaje al destinatario (número o grupo)
+        await client.sendMessage(recipient, message);
+        console.log('Mensaje enviado a:', recipient, 'Mensaje:', message);
         return res.status(200).json({ success: 'Mensaje enviado.' });
     } catch (error) {
         console.error('Error al enviar el mensaje:', error);
         return res.status(500).json({ error: 'Error al enviar el mensaje.' });
-    }
-});
-
-// Nuevo Endpoint para manejar el Webhook de Facebook
-app.get('/webhook', (req, res) => {
-    const VERIFY_TOKEN = '123456789';
-
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
-
-    // Verifica si el modo y el token son válidos
-    if (mode && token === VERIFY_TOKEN) {
-        // Responde al challenge de verificación de Facebook
-        console.log('Verificación del webhook exitosa');
-        res.status(200).send(challenge);
-    } else {
-        // Respuesta no autorizada
-        res.status(403).send('Error de verificación');
-    }
-});
-
-// Maneja las notificaciones POST del Webhook de Facebook
-app.post('/webhook', (req, res) => {
-    const body = req.body;
-
-    // Verifica que sea un evento de una página
-    if (body.object === 'page') {
-        body.entry.forEach(function(entry) {
-            const pageID = entry.id;
-            const timeOfEvent = entry.time;
-
-            // Recorre todos los cambios en el feed
-            entry.changes.forEach(function(change) {
-                if (change.field === 'feed') {
-                    const message = change.value.message || 'Sin mensaje';
-                    console.log('Nueva publicación recibida:', message);
-
-                    // Aquí podrías enviar un mensaje a WhatsApp usando el cliente
-                    // Ejemplo: await client.sendMessage(groupId, message);
-                }
-            });
-        });
-        // Devuelve una respuesta 200 para confirmar que se recibió el evento
-        res.status(200).send('EVENT_RECEIVED');
-    } else {
-        // Devuelve una respuesta 404 si el evento no es de una página
-        res.status(404).send('Evento no soportado');
     }
 });
 
