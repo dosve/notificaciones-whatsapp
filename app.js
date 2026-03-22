@@ -19,8 +19,13 @@ client.on('qr', qr => {
     console.log('Escanea el código QR con WhatsApp');
 });
 
-client.on('ready', () => {
+client.on('ready', async () => {
     console.log('Cliente está listo');
+   // Esperar 5 segundos para asegurarse de que los chats están sincronizados
+   const chats = await client.getChats();
+    console.log(`🔍 Total de chats cargados: ${chats.length}`);
+
+    mostrarGrupos();
 });
 
 client.on('auth_failure', msg => {
@@ -75,7 +80,31 @@ if (process.env.APP_ENV === 'production') {
 
 } else {
     const PORT = 3000;
+
     app.listen(PORT, () => {
         console.log(`Servidor escuchando en http://localhost:${PORT}`);
     });
+}
+
+
+/**
+ * Muestra en consola todos los grupos del usuario conectado
+ */
+
+
+async function mostrarGrupos() {
+    try {
+        const chats = await client.getChats(); // Obtener todos los chats
+        const grupos = chats.filter(chat => chat.isGroup); // Filtrar solo los grupos
+
+        console.log(`📋 Grupos encontrados: ${grupos.length}`);
+        grupos.forEach(group => {
+            console.log(`➡️ ${group.name} | ID: ${group.id._serialized}`);
+        });
+
+        return grupos;
+    } catch (error) {
+        console.error('❌ Error al obtener los grupos:', error);
+        return [];
+    }
 }
